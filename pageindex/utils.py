@@ -20,6 +20,7 @@ from types import SimpleNamespace as config
 CHATGPT_API_KEY = os.getenv("CHATGPT_API_KEY")
 
 def count_tokens(text, model=None):
+    # Count tokens using the tokenizer for the chosen model.
     if not text:
         return 0
     enc = tiktoken.encoding_for_model(model)
@@ -27,6 +28,7 @@ def count_tokens(text, model=None):
     return len(tokens)
 
 def ChatGPT_API_with_finish_reason(model, prompt, api_key=CHATGPT_API_KEY, chat_history=None):
+    # Call OpenAI chat completion and return output + finish reason.
     max_retries = 10
     client = openai.OpenAI(api_key=api_key)
     for i in range(max_retries):
@@ -59,6 +61,7 @@ def ChatGPT_API_with_finish_reason(model, prompt, api_key=CHATGPT_API_KEY, chat_
 
 
 def ChatGPT_API(model, prompt, api_key=CHATGPT_API_KEY, chat_history=None):
+    # Synchronous OpenAI chat completion helper with retries.
     max_retries = 10
     client = openai.OpenAI(api_key=api_key)
     for i in range(max_retries):
@@ -87,6 +90,7 @@ def ChatGPT_API(model, prompt, api_key=CHATGPT_API_KEY, chat_history=None):
             
 
 async def ChatGPT_API_async(model, prompt, api_key=CHATGPT_API_KEY):
+    # Asynchronous OpenAI chat completion helper with retries.
     max_retries = 10
     messages = [{"role": "user", "content": prompt}]
     for i in range(max_retries):
@@ -109,6 +113,7 @@ async def ChatGPT_API_async(model, prompt, api_key=CHATGPT_API_KEY):
             
             
 def get_json_content(response):
+    # Extract JSON payload from a fenced code block if present.
     start_idx = response.find("```json")
     if start_idx != -1:
         start_idx += 7
@@ -123,6 +128,7 @@ def get_json_content(response):
          
 
 def extract_json(content):
+    # Best-effort JSON extraction with cleanup for common formatting issues.
     try:
         # First, try to extract JSON enclosed within ```json and ```
         start_idx = content.find("```json")
@@ -156,6 +162,7 @@ def extract_json(content):
         return {}
 
 def write_node_id(data, node_id=0):
+    # Assign sequential zero-padded node IDs across a nested structure.
     if isinstance(data, dict):
         data['node_id'] = str(node_id).zfill(4)
         node_id += 1
@@ -168,6 +175,7 @@ def write_node_id(data, node_id=0):
     return node_id
 
 def get_nodes(structure):
+    # Flatten a tree into a list (excluding child nodes data).
     if isinstance(structure, dict):
         structure_node = copy.deepcopy(structure)
         structure_node.pop('nodes', None)
@@ -183,6 +191,7 @@ def get_nodes(structure):
         return nodes
     
 def structure_to_list(structure):
+    # Flatten a tree into a list (including child nodes).
     if isinstance(structure, dict):
         nodes = []
         nodes.append(structure)
@@ -197,6 +206,7 @@ def structure_to_list(structure):
 
     
 def get_leaf_nodes(structure):
+    # Extract only the leaf nodes from a tree.
     if isinstance(structure, dict):
         if not structure['nodes']:
             structure_node = copy.deepcopy(structure)
@@ -215,6 +225,7 @@ def get_leaf_nodes(structure):
         return leaf_nodes
 
 def is_leaf_node(data, node_id):
+    # Determine whether a node_id corresponds to a leaf node.
     # Helper function to find the node by its node_id
     def find_node(data, node_id):
         if isinstance(data, dict):
@@ -241,10 +252,12 @@ def is_leaf_node(data, node_id):
     return False
 
 def get_last_node(structure):
+    # Return the last node in a list.
     return structure[-1]
 
 
 def extract_text_from_pdf(pdf_path):
+    # Extract concatenated text from all pages in a PDF.
     pdf_reader = PyPDF2.PdfReader(pdf_path)
     ###return text not list 
     text=""
@@ -254,12 +267,14 @@ def extract_text_from_pdf(pdf_path):
     return text
 
 def get_pdf_title(pdf_path):
+    # Read PDF metadata title if present.
     pdf_reader = PyPDF2.PdfReader(pdf_path)
     meta = pdf_reader.metadata
     title = meta.title if meta and meta.title else 'Untitled'
     return title
 
 def get_text_of_pages(pdf_path, start_page, end_page, tag=True):
+    # Extract text for a page range, optionally tagging page boundaries.
     pdf_reader = PyPDF2.PdfReader(pdf_path)
     text = ""
     for page_num in range(start_page-1, end_page):
@@ -272,6 +287,7 @@ def get_text_of_pages(pdf_path, start_page, end_page, tag=True):
     return text
 
 def get_first_start_page_from_text(text):
+    # Parse the first <start_index_X> tag from labeled text.
     start_page = -1
     start_page_match = re.search(r'<start_index_(\d+)>', text)
     if start_page_match:
@@ -279,6 +295,7 @@ def get_first_start_page_from_text(text):
     return start_page
 
 def get_last_start_page_from_text(text):
+    # Parse the last <start_index_X> tag from labeled text.
     start_page = -1
     # Find all matches of start_index tags
     start_page_matches = re.finditer(r'<start_index_(\d+)>', text)
@@ -290,11 +307,13 @@ def get_last_start_page_from_text(text):
 
 
 def sanitize_filename(filename, replacement='-'):
+    # Replace invalid filesystem characters.
     # In Linux, only '/' and '\0' (null) are invalid in filenames.
     # Null can't be represented in strings, so we only handle '/'.
     return filename.replace('/', replacement)
 
 def get_pdf_name(pdf_path):
+    # Resolve a friendly PDF name from path or PDF metadata.
     # Extract PDF name
     if isinstance(pdf_path, str):
         pdf_name = os.path.basename(pdf_path)
@@ -307,6 +326,7 @@ def get_pdf_name(pdf_path):
 
 
 class JsonLogger:
+    # Simple JSON logger that appends events to a file per document.
     def __init__(self, file_path):
         # Extract PDF name for logger name
         pdf_name = get_pdf_name(file_path)
@@ -348,6 +368,7 @@ class JsonLogger:
 
 
 def list_to_tree(data):
+    # Convert a flat list (with structure indices) into a nested tree.
     def get_parent_structure(structure):
         """Helper function to get the parent structure code"""
         if not structure:
@@ -396,6 +417,7 @@ def list_to_tree(data):
     return [clean_node(node) for node in root_nodes]
 
 def add_preface_if_needed(data):
+    # Insert a preface node when the first section starts after page 1.
     if not isinstance(data, list) or not data:
         return data
 
@@ -411,6 +433,7 @@ def add_preface_if_needed(data):
 
 
 def get_page_tokens(pdf_path, model="gpt-4o-2024-11-20", pdf_parser="PyPDF2"):
+    # Extract per-page text and token counts from a PDF.
     enc = tiktoken.encoding_for_model(model)
     if pdf_parser == "PyPDF2":
         pdf_reader = PyPDF2.PdfReader(pdf_path)
@@ -439,18 +462,21 @@ def get_page_tokens(pdf_path, model="gpt-4o-2024-11-20", pdf_parser="PyPDF2"):
         
 
 def get_text_of_pdf_pages(pdf_pages, start_page, end_page):
+    # Concatenate text from a slice of page tuples (text, token_count).
     text = ""
     for page_num in range(start_page-1, end_page):
         text += pdf_pages[page_num][0]
     return text
 
 def get_text_of_pdf_pages_with_labels(pdf_pages, start_page, end_page):
+    # Concatenate labeled page text with <physical_index_X> tags.
     text = ""
     for page_num in range(start_page-1, end_page):
         text += f"<physical_index_{page_num+1}>\n{pdf_pages[page_num][0]}\n<physical_index_{page_num+1}>\n"
     return text
 
 def get_number_of_pages(pdf_path):
+    # Return total number of pages in a PDF.
     pdf_reader = PyPDF2.PdfReader(pdf_path)
     num = len(pdf_reader.pages)
     return num
@@ -458,6 +484,7 @@ def get_number_of_pages(pdf_path):
 
 
 def post_processing(structure, end_physical_index):
+    # Convert flat TOC list to tree and compute start/end page ranges.
     # First convert page_number to start_index in flat list
     for i, item in enumerate(structure):
         item['start_index'] = item.get('physical_index')
@@ -479,6 +506,7 @@ def post_processing(structure, end_physical_index):
         return structure
 
 def clean_structure_post(data):
+    # Remove page-related fields recursively.
     if isinstance(data, dict):
         data.pop('page_number', None)
         data.pop('start_index', None)
@@ -491,6 +519,7 @@ def clean_structure_post(data):
     return data
 
 def remove_fields(data, fields=['text']):
+    # Remove specified fields from nested dictionaries/lists.
     if isinstance(data, dict):
         return {k: remove_fields(v, fields)
             for k, v in data.items() if k not in fields}
@@ -499,12 +528,14 @@ def remove_fields(data, fields=['text']):
     return data
 
 def print_toc(tree, indent=0):
+    # Pretty-print the TOC tree to stdout.
     for node in tree:
         print('  ' * indent + node['title'])
         if node.get('nodes'):
             print_toc(node['nodes'], indent + 1)
 
 def print_json(data, max_len=40, indent=2):
+    # Print a shortened JSON preview for debugging.
     def simplify_data(obj):
         if isinstance(obj, dict):
             return {k: simplify_data(v) for k, v in obj.items()}
@@ -520,6 +551,7 @@ def print_json(data, max_len=40, indent=2):
 
 
 def remove_structure_text(data):
+    # Remove node text fields recursively.
     if isinstance(data, dict):
         data.pop('text', None)
         if 'nodes' in data:
@@ -531,6 +563,7 @@ def remove_structure_text(data):
 
 
 def check_token_limit(structure, limit=110000):
+    # Find nodes exceeding a token limit for debugging.
     list = structure_to_list(structure)
     for node in list:
         num_tokens = count_tokens(node['text'], model='gpt-4o')
@@ -543,6 +576,7 @@ def check_token_limit(structure, limit=110000):
 
 
 def convert_physical_index_to_int(data):
+    # Convert physical index tags (strings) into integers.
     if isinstance(data, list):
         for i in range(len(data)):
             # Check if item is a dictionary and has 'physical_index' key
@@ -566,6 +600,7 @@ def convert_physical_index_to_int(data):
 
 
 def convert_page_to_int(data):
+    # Convert page strings to integers when possible.
     for item in data:
         if 'page' in item and isinstance(item['page'], str):
             try:
@@ -577,6 +612,7 @@ def convert_page_to_int(data):
 
 
 def add_node_text(node, pdf_pages):
+    # Attach raw text for each node based on start/end page indices.
     if isinstance(node, dict):
         start_page = node.get('start_index')
         end_page = node.get('end_index')
@@ -590,6 +626,7 @@ def add_node_text(node, pdf_pages):
 
 
 def add_node_text_with_labels(node, pdf_pages):
+    # Attach labeled text (with physical_index tags) for each node.
     if isinstance(node, dict):
         start_page = node.get('start_index')
         end_page = node.get('end_index')
@@ -603,6 +640,7 @@ def add_node_text_with_labels(node, pdf_pages):
 
 
 async def generate_node_summary(node, model=None):
+    # Summarize a node's text content via the LLM.
     prompt = f"""You are given a part of a document, your task is to generate a description of the partial document about what are main points covered in the partial document.
 
     Partial Document Text: {node['text']}
@@ -614,6 +652,7 @@ async def generate_node_summary(node, model=None):
 
 
 async def generate_summaries_for_structure(structure, model=None):
+    # Parallel summary generation for all nodes in a structure.
     nodes = structure_to_list(structure)
     tasks = [generate_node_summary(node, model=model) for node in nodes]
     summaries = await asyncio.gather(*tasks)
@@ -624,6 +663,7 @@ async def generate_summaries_for_structure(structure, model=None):
 
 
 def create_clean_structure_for_description(structure):
+    # Strip non-essential fields to reduce prompt size for descriptions.
     """
     Create a clean structure for document description generation,
     excluding unnecessary fields like 'text'.
@@ -647,6 +687,7 @@ def create_clean_structure_for_description(structure):
 
 
 def generate_doc_description(structure, model=None):
+    # Generate a one-sentence document description from its structure.
     prompt = f"""Your are an expert in generating descriptions for a document.
     You are given a structure of a document. Your task is to generate a one-sentence description for the document, which makes it easy to distinguish the document from other documents.
         
@@ -659,12 +700,14 @@ def generate_doc_description(structure, model=None):
 
 
 def reorder_dict(data, key_order):
+    # Reorder dictionary keys to a canonical order.
     if not key_order:
         return data
     return {key: data[key] for key in key_order if key in data}
 
 
 def format_structure(structure, order=None):
+    # Normalize structure key order and remove empty child arrays.
     if not order:
         return structure
     if isinstance(structure, dict):
@@ -679,6 +722,7 @@ def format_structure(structure, order=None):
 
 
 class ConfigLoader:
+    # Load and merge configuration with defaults from config.yaml.
     def __init__(self, default_path: str = None):
         if default_path is None:
             default_path = Path(__file__).parent / "config.yaml"

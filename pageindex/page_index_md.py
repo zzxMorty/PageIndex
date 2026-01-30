@@ -8,6 +8,7 @@ except:
     from utils import *
 
 async def get_node_summary(node, summary_token_threshold=200, model=None):
+    # Use either raw text or an LLM summary depending on token length.
     node_text = node.get('text')
     num_tokens = count_tokens(node_text, model=model)
     if num_tokens < summary_token_threshold:
@@ -17,6 +18,7 @@ async def get_node_summary(node, summary_token_threshold=200, model=None):
 
 
 async def generate_summaries_for_structure_md(structure, summary_token_threshold, model=None):
+    # Generate summaries for each markdown node in parallel.
     nodes = structure_to_list(structure)
     tasks = [get_node_summary(node, summary_token_threshold=summary_token_threshold, model=model) for node in nodes]
     summaries = await asyncio.gather(*tasks)
@@ -30,6 +32,7 @@ async def generate_summaries_for_structure_md(structure, summary_token_threshold
 
 
 def extract_nodes_from_markdown(markdown_content):
+    # Parse markdown headers into a flat list of nodes with line numbers.
     header_pattern = r'^(#{1,6})\s+(.+)$'
     code_block_pattern = r'^```'
     node_list = []
@@ -60,6 +63,7 @@ def extract_nodes_from_markdown(markdown_content):
 
 
 def extract_node_text_content(node_list, markdown_lines):    
+    # Extract text ranges for each node based on header positions.
     all_nodes = []
     for node in node_list:
         line_content = markdown_lines[node['line_num'] - 1]
@@ -87,6 +91,7 @@ def extract_node_text_content(node_list, markdown_lines):
     return all_nodes
 
 def update_node_list_with_text_token_count(node_list, model=None):
+    # Aggregate token counts for nodes including all descendants.
 
     def find_all_children(parent_index, parent_level, node_list):
         """Find all direct and indirect children of a parent node"""
@@ -133,6 +138,7 @@ def update_node_list_with_text_token_count(node_list, model=None):
 
 
 def tree_thinning_for_index(node_list, min_node_token=None, model=None):
+    # Merge small nodes into parents to reduce overly fine-grained trees.
     def find_all_children(parent_index, parent_level, node_list):
         children_indices = []
         
@@ -188,6 +194,7 @@ def tree_thinning_for_index(node_list, min_node_token=None, model=None):
 
 
 def build_tree_from_nodes(node_list):
+    # Convert a flat list of nodes into a hierarchical tree by header level.
     if not node_list:
         return []
     
@@ -222,6 +229,7 @@ def build_tree_from_nodes(node_list):
 
 
 def clean_tree_for_output(tree_nodes):
+    # Remove empty child lists and keep only output-friendly fields.
     cleaned_nodes = []
     
     for node in tree_nodes:
@@ -241,6 +249,7 @@ def clean_tree_for_output(tree_nodes):
 
 
 async def md_to_tree(md_path, if_thinning=False, min_token_threshold=None, if_add_node_summary='no', summary_token_threshold=None, model=None, if_add_doc_description='no', if_add_node_text='no', if_add_node_id='yes'):
+    # Main entry for markdown -> tree generation, with optional summary/description.
     with open(md_path, 'r', encoding='utf-8') as f:
         markdown_content = f.read()
     
